@@ -1,0 +1,341 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML//EN">
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><script src="Type%20Specialisation%20Exercises_files/analytics.js" type="text/javascript"></script>
+<script type="text/javascript">window.addEventListener('DOMContentLoaded',function(){var v=archive_analytics.values;v.service='wb';v.server_name='wwwb-app39.us.archive.org';v.server_ms=289;archive_analytics.send_pageview({});});</script><script type="text/javascript" src="Type%20Specialisation%20Exercises_files/playback.js" charset="utf-8"></script>
+<script type="text/javascript" src="Type%20Specialisation%20Exercises_files/wombat.js" charset="utf-8"></script>
+<script type="text/javascript">
+  __wm.init("https://web.archive.org/web");
+  __wm.wombat("http://www.cs.chalmers.se:80/~rjmh/TypeSpec2/exercises.html","20070915171442","https://web.archive.org/","web","/_static/",
+	      "1189876482");
+</script>
+<link rel="stylesheet" type="text/css" href="Type%20Specialisation%20Exercises_files/banner-styles.css">
+<link rel="stylesheet" type="text/css" href="Type%20Specialisation%20Exercises_files/iconochive.css">
+<!-- End Wayback Rewrite JS Include -->
+
+<title>Type Specialisation Exercises</title>
+</head>
+
+<body><!-- BEGIN WAYBACK TOOLBAR INSERT -->
+<style type="text/css">
+body {
+  margin-top:0 !important;
+  padding-top:0 !important;
+  /*min-width:800px !important;*/
+}
+</style>
+<script>__wm.rw(0);</script>
+<div id="wm-ipp-base" style="display: block; direction: ltr;" lang="en">
+</div><div id="wm-ipp-print">The Wayback Machine - https://web.archive.org/web/20070915171442/http://www.cs.chalmers.se:80/~rjmh/TypeSpec2/exercises.html</div>
+<div id="donato" style="position:relative;width:100%;">
+  <div id="donato-base">
+    <iframe id="donato-if" src="Type%20Specialisation%20Exercises_files/donate.html" scrolling="no" style="width:100%; height:100%" frameborder="0">
+    </iframe>
+  </div>
+</div><script type="text/javascript">
+__wm.bt(650,27,25,2,"web","http://www.cs.chalmers.se/~rjmh/TypeSpec2/exercises.html","20070915171442",1996,"/_static/",["/_static/css/banner-styles.css?v=omkqRugM","/_static/css/iconochive.css?v=qtvMKcIJ"], false);
+  __wm.rw(1);
+</script>
+<!-- END WAYBACK TOOLBAR INSERT -->
+<h1>Type Specialisation Exercises</h1>
+
+<h2>Power play</h2>
+The <i>power</i> function, with a static first parameter, can be
+defined as follows:
+<pre>letrec power n x = if@ n=@ 1 then x else x*power (n-@1) x
+in \x. power 3 x
+</pre>
+But this program cannot be specialised as it stands, because <tt>n</tt>
+would need to be assigned several different residual types.
+<ul>
+<li> Solve the problem by making the <tt>power</tt> function
+  polyvariant.
+</li><li> Alternatively, make the <tt>power</tt> function unfoldable instead.
+</li><li> Find a third solution, by using constructor specialisation to
+  pass several different static arguments to <tt>power</tt>.
+</li></ul>
+
+<h2>Variations on append</h2>
+The <i>append</i> function can be defined and tested as follows:
+<pre>letrec append xs ys =
+  case xs of
+    Nil: ys,
+    Cons x xs: Cons x (append xs ys)
+  esac
+in
+
+append (Cons (lift 1) (Cons (lift 2) Nil)) (Cons (lift 3) Nil)
+</pre>
+So far all the list constructors are dynamic. Make the constructors of
+the first argument static, to create a specialised version of
+<i>append</i> for lists of length two. Now make the constructors of the
+second argument and result static also. Do you understand why you
+obtain the residual program that you do?
+
+<h2>Experiments with Arity Raising</h2>
+Experiment with the arity raiser, by giving the specialiser purely
+dynamic terms containing pairs in different contexts, and examining
+the output. For example, specialise
+<pre>let f x = x in f (lift 1, lift 2)
+</pre>
+and
+<pre>let proj x = case x of Inj y: y esac
+in proj (Inj (lift 1, lift 2))
+</pre>
+Can you find a simple modification to these examples which avoids the
+duplication of code? <i>Hint: insert a dynamic constructor somewhere.</i>
+
+Why not define function composition, and a function <tt>swap</tt> which
+swaps the components of pairs, and try composing <tt>swap</tt> with itself?
+
+<h2>Simulating Constructor Specialisation: An Exercise in
+  First-Class Polyvariance</h2>
+
+One way to model data-structures in the pure lambda-calculus is as
+follows. Model data values by functions from the branches of a
+<b>case</b> over the datatype to the result of the <b>case</b>. Model
+<b>case</b> branches by functions from the components to the result of
+the branch. Model constructors by functions which select the
+appropriate branch, and apply it to the components.
+For example, lists can be modelled as follows:
+<pre>nil c n = n
+cons x xs c n = c x xs
+listcase xs c n = xs c n
+</pre>
+
+If we apply this idea to a datatype with one unary constructor, we
+obtain
+<pre>inj x k = k x
+caseinj x k = x k
+</pre>
+But suppose we want to model the behaviour of the specialisable
+constructor <tt>In</tt>. By representing <b>case</b> branches as a 
+<i>polyvariant</i> function, model constructor specialisation using
+<tt>poly</tt> and <tt>spec</tt>.
+
+<h2><a name="optspec">Optimal Specialisation</a></h2>
+A self-interpreter for the specialiser's metalanguage can be
+specialised <i>optimally</i> if, for any program <i>p</i>,
+<pre> <i>mix int p = p</i> </pre>
+(up to trivialities such as renaming of variables). If the
+meta-language is typed, then an optimal specialiser <i>must</i>
+specialise types, since otherwise this equation cannot hold for any
+<i>p</i> containing a type not found in <i>int</i>. In particular, the
+`universal' type used to represent values in the interpreter must be
+specialised to the types of those values. The type specialiser was the
+first to be able to do so for the lambda-calculus. In this
+exercise, you will repeat this experiment.
+
+Take the following typed interpreter for the lambda-calculus plus
+constants:
+<pre>letrec eval env e =
+  case e of
+    Cn n: Num n,
+    Vr x: env x,
+    Lm x e: Fun (\v. 
+             let env y = if x=y then v else env y
+             in eval env e),
+    Ap e1 e2:case eval env e1 of
+               Fun f: f (eval env e2)
+             esac
+  esac
+in
+
+eval (\i.Wrong)
+
+(Ap (Ap (Lm (lift "x") (Lm (lift "f") 
+          (Ap (Vr (lift "f")) (Vr (lift "x"))))) (Cn (lift 3)))
+    (Lm (lift "z") (Vr (lift "z"))))
+</pre>
+The interpreter can be specialised as it stands, but since everything
+is dynamic then no specialisation occurs. Make the following changes
+to the binding-times in the interpreter, along with any other
+necessary changes to make specialisation possible, and see how the
+results change. 
+<ul>
+<li> Make the constructors <tt>Cn</tt>, <tt>Vr</tt>, <tt>Lm</tt> and
+  <tt>Ap</tt> static.
+</li><li> Make the constants and variable names in the program static.
+</li><li> Unfold calls of <tt>eval</tt>, if you have not already done so.
+</li><li> Make the constructors <tt>Num</tt>, <tt>Fun</tt> and <tt>Wrong</tt> static.
+</li></ul>
+Have you achieved optimal specialisation? (If not: keep trying.)
+
+What happens if you specialise this interpreter to an <i>ill-typed</i>
+lambda-term, such as
+<pre>(Ap@ (Cn@ 3) (Cn@ 4))
+</pre>
+Is this the behaviour you would expect?
+
+<h2>Transforming Polymorphism to Monomorphism</h2>
+
+The type specialiser is not optimal for the polymorphic
+lambda-calculus, because both source and residual programs are
+simply typed (<i>i.e.</i> monomorphic). However, we can write an 
+<i>interpreter</i> for a polymorphic language in the type specialiser's
+meta-language. Specialising such an interpreter to a polymorphic
+program will translate it into a monomorphic one.
+
+Begin by adding a case to your optimal interpreter from the previous exercise
+so that it also interprets a <b>let</b> construct:
+<pre>Let x e1 e2
+</pre>
+represents <b>let</b> x=e1 <b>in</b> e2. Test your interpreter by
+specialising it to
+<pre>(Let@ "id" (Lm@ "x" (Vr@ "x")) (Ap@ (Vr@ "id") (Cn@ 3)))
+</pre>
+Make sure that specialisation is still optimal --- that is, you obtain
+a corresponding <b>let</b> in the residual program.
+
+What happens if you specialise your interpreter to a program which
+<i>requires</i> polymorphism to be well-typed? For example,
+<pre>(Let@ "id" (Lm@ "x" (Vr@ "x")) 
+   (Ap@ (Ap@ (Vr@ "id") (Vr@ "id")) (Cn@ 3)))
+</pre>
+
+Modify your interpreter so that it <i>can</i> be specialised to this
+term. You will need to generate <i>two</i> versions of <tt>id</tt> in the
+residual program, with two different monotypes --- could polyvariance
+be useful perhaps? Following the Hindley-Milner type system, you may
+wish to distinguish between lambda-bound and <b>let</b>-bound
+variables, where only the latter may be polymorphic.
+
+<h2>Transforming Higher-Order to First-Order</h2>
+Higher-order programs can be transformed to first-order ones by
+representing function values as data-structures called <i>closures</i>,
+consisting of a tag identifying the function, and the values of its
+free variables. Function calls are interpreted by calling a dispatch
+function which inspects the tag, and then behaves like the function
+that the tag identifies. The transformation to first-order form is
+called <i>closure conversion</i> or <i>firstification</i>, and is a
+little tricky in a typed language. The object of this exercise is to
+develop an interpreter for the lambda-calculus, which when
+specialised to a lambda-term produces the result of firstifying it.
+
+Start from the optimal interpreter you developed <a href="#optspec">above</a>.
+Can you change the representation of functions in
+the interpreter in such a way that <i>residual</i> functions will be
+represented by tagged tuples of their free variables? Don't forget to
+introduce a dispatching function, which can be specialised to produce
+the dispatch function in the firstified code! A suitable
+lambda-expression to test your firstifier on is
+<pre>(Ap@ (Lm@ "ap" (Ap@ (Ap@ (Vr@ "ap") (Lm@ "z" (Vr@ "z")))
+                    (Ap@ (Ap@ (Vr@ "ap") (Lm@ "w" (Cn@ 3)))
+                         (Cn@ 4))))
+     (Lm@ "f" (Lm@ "x" (Ap@ (Vr@ "f") (Vr@ "x")))))
+</pre>
+
+<i>You may encounter an <i>infinite representation</i> error from the
+  arity raiser during this exercise. Certain recursive static
+  functions can cause this problem. In this case, try passing the
+  dispatch function as a parameter to <tt>eval</tt> rather than
+  referring to it as a free variable.</i>
+
+<h2>Interpreting Imperative Programs</h2>
+Below is an interpreter for a simple imperative language, supporting
+assignments, conditional statements, and sequencing. Variables in the
+interpreted language need not be declared: a variable is given a value
+simply by assigning to it. The interpreter given below is purely
+dynamic; your job is to modify it so that the program to be
+interpreted, and the names in the environment, are static.
+<pre>let look env x = env x in
+let assign env x v = 
+   \i. if i=x then v else env i
+in
+
+letrec eval env e =
+  case e of
+    Con n: n,
+    Var s: look env s,
+    Add e1 e2: eval env e1 + eval env e2
+  esac
+in
+
+letrec exec env p =
+  case p of
+    Skip: env,
+    Assign x e: assign env x (eval env e),
+    Seq p1 p2: let env=exec env p1 in exec env p2,
+    If e p1 p2: if eval env e=lift 0 then exec env p2 
+                else exec env p1
+  esac
+in
+
+let run p e = let env = exec (\i.lift 0) p in
+              eval env e
+in
+
+run
+(Seq (Assign (lift "x") (Con (lift 3)))
+     (Seq (If (Var (lift "x"))
+              (Assign (lift "y") (Add (Var (lift "x")) (Con (lift 1))))
+              Skip)
+          (Assign (lift "z") (Var (lift "y")))))
+
+(Add (Var (lift "x")) (Var (lift "y")))
+</pre>
+
+This interpreter would be difficult to specialise with a partial
+evaluator, because of the dynamic conditional in the function
+<tt>exec</tt>, which forces the result of <tt>exec</tt> to be dynamic. But
+<tt>exec</tt> returns the environment, which should of course be
+partially static. Luckily the type specialiser allows dynamic
+conditionals to have partially static results, so the problem will not
+arise.
+
+One solution using a partial evaluator would be to use <i>CPS
+  specialisation</i>, which specialises the context of a dynamic
+conditional with partially static branches <i>twice</i>, once in each
+branch. In the example above, the statement following the <tt>If</tt>
+statement would need to be `compiled' twice (that is, two different
+specialisations of <tt>exec</tt> to this statement would need to be
+generated), since one branch of the <tt>If</tt> introduces the variable
+<tt>y</tt> into the environment, while the other branch does not. Thus
+the partially static environment would have a different shape,
+depending on which branch of the conditional statement was chosen, and
+the reference to <tt>y</tt> in
+<pre>(Assign (lift "z") (Var (lift "y")))
+</pre>
+would need to be compiled differently in each case. The type
+specialiser on the other hand `compiles' this last statement once
+only. Inspect the residual code: how is the problem of different
+variables in the environment after each branch of an <tt>If</tt>
+resolved?
+
+In the interpreter given above, uninitialised variables have the value
+zero. Modify the interpreter to distinguish between initialised and
+uninitialised variables in the environment. What is the effect of
+making this distinction static, in the example above?
+
+
+
+
+
+<hr>
+<address></address>
+<!-- hhmts start -->
+Last modified: Mon Jul  6 23:58:01 MEST 1998
+<!-- hhmts end -->
+ 
+
+</body></html>
+<!--
+     FILE ARCHIVED ON 17:14:42 Sep 15, 2007 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 19:03:10 Jul 01, 2021.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
+<!--
+playback timings (ms):
+  exclusion.robots: 0.429
+  PetaboxLoader3.resolve: 126.332
+  LoadShardBlock: 53.319 (3)
+  RedisCDXSource: 2.921
+  esindex: 0.012
+  exclusion.robots.policy: 0.413
+  CDXLines.iter: 22.815 (3)
+  captures_list: 83.975
+  PetaboxLoader3.datanode: 118.182 (4)
+  load_resource: 196.415
+-->
